@@ -96,7 +96,7 @@ check_createtables() {
   EXECUTOR_OPTIONS="--executor-memory 2g --conf spark.executor.extraJavaOptions=-Dlog4j.configuration=file:///${output_dir}/log4j.properties"
   logInfo "Checking pre-reqs for running TPC-DS queries. May take a few seconds.."
   bin/spark-sql ${DRIVER_OPTIONS} ${EXECUTOR_OPTIONS} --conf spark.sql.catalogImplementation=hive -f ${TPCDS_WORK_DIR}/row_counts.sql > ${TPCDS_WORK_DIR}/rowcounts.out 2>&1
-  cat ${TPCDS_WORK_DIR}/rowcounts.out | grep -v "Time" | grep -v "SLF4J" >> ${TPCDS_WORK_DIR}/rowcounts.rrn
+  cat ${TPCDS_WORK_DIR}/rowcounts.out | grep -v "Time" | grep -v "SLF4J" | grep -v "Setting default log level to" | grep -v "To adjust logging level use" | grep -v "Spark Web UI available at" | grep -v "Spark master" >> ${TPCDS_WORK_DIR}/rowcounts.rrn
   file1=${TPCDS_WORK_DIR}/rowcounts.rrn
   file2=${TPCDS_ROOT_DIR}/src/ddl/rowcounts.expected
   if cmp -s "$file1" "$file2"
@@ -334,8 +334,11 @@ function create_spark_tables {
   if [ "$result" -ne 1 ]; then 
     current_dir=`pwd`
     cd $SPARK_HOME
-    DRIVER_OPTIONS="--driver-java-options -Dlog4j.configuration=file:///${output_dir}/log4j.properties"
-    EXECUTOR_OPTIONS="--conf spark.executor.extraJavaOptions=-Dlog4j.configuration=file:///${output_dir}/log4j.properties"
+    DRIVER_OPTIONS="--driver-memory 4g --driver-java-options  -Dlog4j.configuration=file:///${output_dir}/log4j.properties"
+    EXECUTOR_OPTIONS="--executor-memory 2g --conf spark.executor.extraJavaOptions=-Dlog4j.configuration=file:///${output_dir}/log4j.properties"
+    if [[ "$(echo -e "$spark_version\n1.6.3" | sort -V | head -1)" == "$spark_version" ]]; then
+      DRIVER_OPTIONS="${DRIVER_OPTIONS} --packages com.databricks:spark-csv_2.11:1.5.0 my_script.py"
+    fi
     logInfo "Creating tables. Will take a few minutes ..."
     ProgressBar 2 122
     bin/spark-sql ${DRIVER_OPTIONS} ${EXECUTOR_OPTIONS} --conf spark.sql.catalogImplementation=hive -f ${TPCDS_WORK_DIR}/create_database.sql > ${TPCDS_WORK_DIR}/create_database.out 2>&1
