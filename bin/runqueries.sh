@@ -4,6 +4,7 @@ SPARK_HOME=$1
 OUTPUT_DIR=$2
 DRIVER_OPTIONS="--driver-memory 4g --driver-java-options -Dlog4j.configuration=file:///${OUTPUT_DIR}/log4j.properties"
 EXECUTOR_OPTIONS="--executor-memory 2g --num-executors 1 --conf spark.executor.extraJavaOptions=-Dlog4j.configuration=file:///${OUTPUT_DIR}/log4j.properties --conf spark.sql.crossJoin.enabled=true"
+EXECUTOR_OPTIONS="${EXECUTOR_OPTIONS} --conf spark.metrics.conf=${SPARK_HOME}/conf/metrics.properties --master yarn" 
 
 cd $SPARK_HOME
 divider===============================
@@ -13,6 +14,7 @@ format=" %-10s %11.2f %10s %4d\n"
 width=40
 printf "$header" "Query" "Time(secs)" "Rows returned" > ${OUTPUT_DIR}/run_summary.txt
 printf "%$width.${width}s\n" "$divider" >> ${OUTPUT_DIR}/run_summary.txt
+rm /tmp/local-*.csv
 for i in `cat ${OUTPUT_DIR}/runlist.txt`;
 do
   num=`printf "%02d\n" $i`
@@ -28,6 +30,8 @@ do
        "" \
        $num_rows >> ${OUTPUT_DIR}/run_summary.txt 
   done 
+  mkdir ${OUTPUT_DIR}/metrics/query${num} -p
+  mv /tmp/local-*.csv ${OUTPUT_DIR}/metrics/query${num}
 
 done 
 touch ${OUTPUT_DIR}/queryfinal.res
